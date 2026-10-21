@@ -19,7 +19,7 @@ see [How verification works](#how-verification-works)). It never runs a pre-exis
 | `swift-version` | yes | | Exact toolchain version, e.g. `6.4.1` or `6.3.3`. Ranges and `latest` are not supported. |
 | `swift-sdks` | no | | Cross-compilation Swift SDKs to install after the toolchain: `static-linux`, `wasm`, `android` (comma or space separated). |
 | `use-preinstalled` | no | `false` | **Unverified opt-in.** If `swift` on `PATH` already reports exactly `swift-version`, run and use it instead of installing. By default no pre-existing binary is ever executed. |
-| `cache` | no | `true` | Cache the downloaded Linux toolchain archive and its `.sig` with `actions/cache`. The archive is re-verified with GPG on every run and extracted into a fresh directory; `false` reuses nothing on disk. |
+| `cache` | no | `true` | Cache the downloaded Linux toolchain archive and its `.sig` with `actions/cache`. The archive is re-verified with GPG on every run and extracted into a clean per-version directory; `false` reuses nothing on disk. |
 
 ## Outputs
 
@@ -50,14 +50,20 @@ published for every platform (for example, newer releases have no Ubuntu 20.04 b
 download fails with the URL that was tried.
 
 Linux: the tarball and `.sig` are kept in `$RUNNER_TOOL_CACHE/swift-archives/...` and cached (key: version,
-platform, arch). Every run, including a cache hit, re-verifies them with GPG and extracts into a new private
-directory under `$RUNNER_TEMP`, which is added to `PATH`; extracted trees are never cached or reused. A cache
-entry that fails verification fails the job instead of being re-downloaded. Missing build prerequisites (`libcurl4-openssl-dev`,
+platform, arch). Every run, including a cache hit, copies them to a private snapshot, re-verifies the snapshot with
+GPG, and extracts that same snapshot into `$RUNNER_TEMP/setup-swift/<version>/<arch>-<platform>`, which is added to
+`PATH`. The path is stable across runs so SwiftPM build caches (which record the compiler path) stay valid. Before
+extraction the directory is validated (exactly that shape, no `..`, and no symlink in any component from
+`RUNNER_TEMP` down, checked again just before use) and removed entirely, so nothing previously on disk is reused.
+A cache entry that fails verification fails the job instead of being re-downloaded. Isolation model:
+`RUNNER_TEMP` is private to one runner instance and emptied for every job on GitHub-hosted runners, so earlier or
+concurrent jobs cannot plant or wipe the toolchain. Self-hosted runners must not share `RUNNER_TEMP` between
+concurrently running jobs, and must run jobs of different trust levels on separate runner instances. Missing build prerequisites (`libcurl4-openssl-dev`,
 `libxml2-dev`, the GCC dev packages, ...) are installed with `apt-get` only if absent.
 
 macOS: the package is installed into the user domain (`~/Library/Developer/Toolchains`), falling back to
 `sudo installer -target /`. `TOOLCHAINS` is exported with the toolchain's bundle identifier and its
-`usr/bin` is prepended to `PATH`. macOS installs are not cached.
+`usr/bin` is prepended to `PATH`. The install path is deterministic (like the Linux and Windows ones), so SwiftPM build caches stay valid. macOS installs are not cached.
 
 Windows: the installer runs silently (`/install /quiet`) into `%LocalAppData%\Programs\Swift`; the toolchain and
 runtime `bin` directories are added to `PATH` and `SDKROOT` is set. Visual Studio (C++ tools, Windows SDK),
