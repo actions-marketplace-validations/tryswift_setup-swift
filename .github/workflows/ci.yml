@@ -76,6 +76,7 @@ jobs:
         with:
           swift-version: ${{ matrix.swift }}
           windows-toolchain-variant: noasserts
+          windows-minimal: true
       - name: Check the +NoAsserts toolchain was selected, and compile
         env:
           VERSION: ${{ steps.setup.outputs.version }}

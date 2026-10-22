@@ -17,6 +17,16 @@ switch ($variant) {
   }
   default { Write-Host "::error::windows-toolchain-variant must be asserts or noasserts, got '$variant'"; exit 1 }
 }
+# windows-minimal: the installer features a CI build does not use - the debugger, its Python and the
+# Android platform, a second SDK. Not the IDE feature: without it swift.exe fails to start with
+# ERROR_SXS_CANT_GEN_ACTCTX (14001), measured on 6.4.1 with each feature left out on its own.
+switch ($env:WINDOWS_MINIMAL) {
+  { $_ -in @('', 'false') } { }
+  'true' {
+    $installerOptions += @('OptionsInstallDBG=0', 'OptionsInstallPy=0', 'OptionsInstallAndroidPlatform=0')
+  }
+  default { Write-Host "::error::windows-minimal must be true or false, got '$env:WINDOWS_MINIMAL'"; exit 1 }
+}
 # Publisher the installer must be signed by, see README.md. swift.org's Windows installers are signed
 # with an Apple Inc. certificate whose OU (an Apple internal group id) is deliberately not pinned.
 $ExpectedSubject = '^CN=Apple Inc\., (OU=[^,]+, )?O=Apple Inc\., L=Cupertino, S=California, C=US$'

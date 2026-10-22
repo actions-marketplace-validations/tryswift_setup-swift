@@ -26,10 +26,19 @@ inputs:
       (https://github.com/swiftlang/swift/issues/92379); the +NoAsserts one does not.
     required: false
     default: "asserts"
+  windows-minimal:
+    description: >-
+      Windows only: leave out what a CI build does not use - the debugger, its embedded Python and the
+      Android platform. Shortens the install; default false installs everything the installer
+      installs by default.
+    required: false
+    default: "false"
   cache:
     description: >-
       Cache the downloaded Linux toolchain archive and its signature with actions/cache. The archive is
-      re-verified with GPG on every run; with false nothing on disk is ever reused.
+      re-verified with GPG on every run; with false nothing on disk is ever reused. The macOS .pkg and
+      the Windows installer are not cached: restoring them from the Actions cache measured slower than
+      downloading them from swift.org.
     required: false
     default: "true"
 outputs:
@@ -111,6 +120,7 @@ runs:
       env:
         SWIFT_VERSION: ${{ inputs.swift-version }}
         WINDOWS_TOOLCHAIN_VARIANT: ${{ inputs.windows-toolchain-variant }}
+        WINDOWS_MINIMAL: ${{ inputs.windows-minimal }}
       run: '& "$env:GITHUB_ACTION_PATH/install-windows.ps1"'
 
     - name: Report Swift version

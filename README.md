@@ -20,7 +20,8 @@ see [How verification works](#how-verification-works)). It never runs a pre-exis
 | `swift-sdks` | no | | Cross-compilation Swift SDKs to install after the toolchain: `static-linux`, `wasm`, `android` (comma or space separated). |
 | `use-preinstalled` | no | `false` | **Unverified opt-in.** If `swift` on `PATH` already reports exactly `swift-version`, run and use it instead of installing. By default no pre-existing binary is ever executed. |
 | `windows-toolchain-variant` | no | `asserts` | Windows only. `asserts` keeps the installer's default `+Asserts` toolchain; `noasserts` installs the `+NoAsserts` one instead. Use `noasserts` on win-arm64, where the `+Asserts` `swift-package.exe` fails to start ([swiftlang/swift#92379](https://github.com/swiftlang/swift/issues/92379)). |
-| `cache` | no | `true` | Cache the downloaded Linux toolchain archive and its `.sig` with `actions/cache`. The archive is re-verified with GPG on every run and extracted into a clean per-version directory; `false` reuses nothing on disk. |
+| `windows-minimal` | no | `false` | Windows only. `true` leaves out what a CI build does not use: the debugger (`OptionsInstallDBG`), its embedded Python (`OptionsInstallPy`) and the Android platform (`OptionsInstallAndroidPlatform`). The IDE feature stays: without it `swift.exe` fails to start (`ERROR_SXS_CANT_GEN_ACTCTX`). |
+| `cache` | no | `true` | Cache the downloaded Linux toolchain archive and its `.sig` with `actions/cache`. The archive is re-verified with GPG on every run and extracted into a clean per-version directory; `false` reuses nothing on disk. The macOS `.pkg` and the Windows installer are not cached: restoring them from the Actions cache measured slower than downloading them from swift.org. |
 
 ## Outputs
 
@@ -60,7 +61,7 @@ A cache entry that fails verification fails the job instead of being re-download
 `RUNNER_TEMP` is private to one runner instance and emptied for every job on GitHub-hosted runners, so earlier or
 concurrent jobs cannot plant or wipe the toolchain. Self-hosted runners must not share `RUNNER_TEMP` between
 concurrently running jobs, and must run jobs of different trust levels on separate runner instances. Missing build prerequisites (`libcurl4-openssl-dev`,
-`libxml2-dev`, the GCC dev packages, ...) are installed with `apt-get` only if absent.
+`libxml2-dev`, the GCC dev packages, ...) are installed with `apt-get` only if absent - from the package lists the runner image ships, refreshed only if that fails, and, apart from `curl` and `gnupg2`, in the background while the archive is fetched, verified and extracted. The archive is extracted with `pigz` when the runner has it.
 
 macOS: the package is installed into the user domain (`~/Library/Developer/Toolchains`), falling back to
 `sudo installer -target /`. `TOOLCHAINS` is exported with the toolchain's bundle identifier and its
