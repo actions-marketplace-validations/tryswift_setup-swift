@@ -1,5 +1,12 @@
 # setup-swift
 
+[![CI](https://github.com/tryswift/setup-swift/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tryswift/setup-swift/actions/workflows/ci.yml)
+![Ubuntu x86_64 | aarch64](https://img.shields.io/badge/Ubuntu-x86__64%20%7C%20aarch64-E95420?logo=ubuntu&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-Apple%20silicon%20%7C%20Intel-000000?logo=apple&logoColor=white)
+![Windows x86_64 | arm64](https://img.shields.io/badge/Windows-x86__64%20%7C%20arm64-0078D4?logo=windows&logoColor=white)
+![Swift SDKs](https://img.shields.io/badge/Swift%20SDKs-static%20Linux%20%7C%20Wasm%20%7C%20Android-F05138?logo=swift&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A composite GitHub Action that installs an exact [swift.org](https://www.swift.org) toolchain and
 **verifies the toolchain it installs before use** (Linux: GPG, macOS: Apple signature and team, Windows: Authenticode;
 see [How verification works](#how-verification-works)). It never runs a pre-existing `swift` unless you opt in with
@@ -10,6 +17,29 @@ see [How verification works](#how-verification-works)). It never runs a pre-exis
 - uses: tryswift/setup-swift@v1
   with:
     swift-version: "6.4.1"
+```
+
+`@v1` follows the latest 1.x release. To pin, use a release tag (`@v1.1.0`) or, for the strongest guarantee,
+the commit SHA that tag points at.
+
+On Windows, arm64 needs the `+NoAsserts` toolchain ([swiftlang/swift#92379](https://github.com/swiftlang/swift/issues/92379)),
+and a CI build can leave out the debugger, its Python and the Android platform to shorten the install:
+
+```yaml
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: tryswift/setup-swift@v1
+        with:
+          swift-version: "6.4.1"
+          windows-toolchain-variant: noasserts
+          windows-minimal: true
+      - run: swift build
 ```
 
 ## Inputs
